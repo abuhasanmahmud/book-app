@@ -1,20 +1,35 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, FlatList, ActivityIndicator, Image } from "react-native";
-import styles from "../../assets/styles/home.style"; // ✅ Import shared styles
+import styles from "../../assets/styles/home.style";
+import { API_URL } from "../../constants/api";
+import { useAuthStore } from "../../store/authStore";
+import { useLocalSearchParams } from "expo-router";
 
 export default function Home() {
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { token } = useAuthStore();
+  const params = useLocalSearchParams();
 
   const fetchBooks = async () => {
     try {
-      const response = await fetch(
-        "http://localhost:3000/api/books?page=1&limit=5"
-      );
+      const response = await fetch(`${API_URL}/books?page=1&limit=5`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`, // 👈 Add token here
+        },
+      });
+
       const data = await response.json();
-      setBooks(data.books);
+
+      console.log("Fetched data:", data);
+
+      // Ensure data.books is an array, else fallback to empty array
+      setBooks(Array.isArray(data.books) ? data.books : []);
     } catch (error) {
       console.error("Error fetching books:", error);
+      setBooks([]); // fallback empty array on error
     } finally {
       setLoading(false);
     }
@@ -22,7 +37,7 @@ export default function Home() {
 
   useEffect(() => {
     fetchBooks();
-  }, []);
+  }, [params.refresh]);
 
   if (loading) {
     return (
@@ -32,7 +47,7 @@ export default function Home() {
     );
   }
 
-  if (books.length === 0) {
+  if (!books || books.length === 0) {
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyText}>No books found</Text>
@@ -50,7 +65,6 @@ export default function Home() {
       contentContainerStyle={styles.listContainer}
       renderItem={({ item }) => (
         <View style={styles.bookCard}>
-          {/* Optional: user avatar or username can go here */}
           <View style={styles.bookImageContainer}>
             <Image source={{ uri: item.image }} style={styles.bookImage} />
           </View>
@@ -60,7 +74,6 @@ export default function Home() {
               <Text>⭐ {item.rating}</Text>
             </View>
             <Text style={styles.caption}>{item.caption}</Text>
-            {/* Optional: createdAt or username */}
           </View>
         </View>
       )}

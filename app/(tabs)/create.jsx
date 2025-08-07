@@ -91,24 +91,32 @@ export default function Create() {
         }),
       });
 
-      const data = await response.json();
-      console.log("Response data:", data);
+      const contentType = response.headers.get("content-type");
+      const text = await response.text(); // read as raw text
+
+      // console.log("Raw response text:", text);
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to submit book.");
+        throw new Error(`Server responded with status ${response.status}`);
       }
 
-      Alert.alert("Success", "Book submitted successfully!");
+      if (contentType && contentType.includes("application/json")) {
+        const data = JSON.parse(text); // safely parse after check
+        // console.log("Parsed JSON:", data);
+        Alert.alert("Success", "Book submitted successfully!");
 
-      // Reset form
-      setTitle("");
-      setCaption("");
-      setRating(3);
-      setImageBase64(null);
-      setImageUri(null);
-      router.push("/");
+        // Reset form
+        setTitle("");
+        setCaption("");
+        setRating(3);
+        setImageBase64(null);
+        setImageUri(null);
+        router.push({ pathname: "/", params: { refresh: true } });
+      } else {
+        throw new Error("Unexpected response content type. Not JSON.");
+      }
     } catch (error) {
-      console.error("Submit error:", error.message);
+      console.error("Submit error:", error);
       Alert.alert("Error", error.message);
     } finally {
       setLoading(false);
